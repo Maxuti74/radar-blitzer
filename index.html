@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Per iOS - Web App Fullscreen -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Radar">
+    <link rel="apple-touch-icon" href="icon.png">
+    <link rel="manifest" href="manifest.json">
+
+    <title>Rilevatore Radar</title>
+    <style>
+        /* Reset e Box Sizing */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        /* Body - Sfondo scuro e vibrante */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Font più moderno */
+            background: linear-gradient(135deg, #1A2A42, #243B55); /* Gradiente più profondo */
+            color: white;
+            min-height: 100vh;
+            padding: 15px; /* Padding leggermente aumentato */
+            display: flex; /* Centra il container */
+            justify-content: center;
+            align-items: center;
+        }
+        
+        /* Container principale - Effetto Glassmorphism */
+        .container {
+            max-width: 420px; /* Lievemente più largo */
+            width: 100%;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.08); /* Meno opaco per un effetto più "vetro" */
+            backdrop-filter: blur(15px); /* Blur aumentato */
+            -webkit-backdrop-filter: blur(15px); /* Compatibilità Safari */
+            border-radius: 25px; /* Angoli più arrotondati */
+            padding: 25px; /* Padding aumentato */
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1); /* Ombra e bordo sottile */
+            border: 1px solid rgba(255, 255, 255, 0.15); /* Bordo sottile */
+        }
+        
+        /* Display Velocità - Grande e luminoso */
+        .speed-display {
+            text-align: center;
+            background: rgba(0, 0, 0, 0.3); /* Sfondo più scuro per il contrasto */
+            border-radius: 20px; /* Angoli arrotondati */
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: inset 0 0 15px rgba(0, 255, 136, 0.1); /* Leggero bagliore interno */
+        }
+        
+        .current-speed {
+            font-size: 5.5em; /* Molto più grande */
+            font-weight: 800; /* Extra bold */
+            color: #00E676; /* Verde neon brillante */
+            text-shadow: 0 0 35px rgba(0, 230, 118, 0.8), 0 0 10px rgba(0, 230, 118, 0.4); /* Bagliore più intenso */
+            letter-spacing: -2px; /* Compatta leggermente i numeri */
+        }
+        
+        .speed-label {
+            font-size: 1.1em; /* Leggermente più grande */
+            opacity: 0.85;
+            margin-top: 8px;
+            font-weight: 500;
+        }
+        
+        /* Display Strada - Dettagliato ma discreto */
+        .street-display {
+            background: rgba(0, 0, 0, 0.25); /* Sfondo più scuro e trasparente */
+            border-radius: 15px; /* Angoli arrotondati */
+            padding: 15px;
+            margin-top: 20px;
+            /* Rimosso border-left per un look più moderno */
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.1); /* Bagliore sottile */
+            border: 1px solid rgba(0, 255, 136, 0.2); /* Bordo sottile verde */
+        }
+        
+        .street-name {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #00FF88;
+            margin-bottom: 5px;
+            text-shadow: 0 0 8px rgba(0, 255, 136, 0.3);
+        }
+        
+        .street-details {
+            font-size: 0.95em;
+            opacity: 0.85;
+        }
+        
+        /* Warning Alert - Impatto visivo elevato */
+        .warning-alert {
+            background: linear-gradient(45deg, #FF3D00, #E62900); /* Rosso più caldo e intenso */
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 25px;
+            text-align: center;
+            animation: pulse 0.7s infinite alternate; /* Animazione più rapida e alternata */
+            box-shadow: 0 0 30px rgba(255, 0, 0, 0.6); /* Ombra rossa intensa */
+            border: 2px solid #FF0000;
+            display: none;
+        }
+        
+        .warning-alert.active {
+            display: block;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.02); opacity: 0.8; } /* Lieve ingrandimento */
+        }
+        
+        .warning-alert h3 {
+            font-size: 1.8em; /* Titolo più grande */
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+        
+        .warning-alert p {
+            font-size: 1.1em;
+            margin-top: 5px;
+        }
+        
+        .warning-alert span {
+            font-weight: bold;
+            color: #FFEB3B; /* Giallo per i numeri nell'avviso */
+        }
+
+        /* Nearby Radar - Avviso amichevole */
+        .nearby-radar {
+            background: rgba(255, 165, 0, 0.25); /* Sfondo arancione trasparente */
+            border: 2px solid #FFA500;
+            border-radius: 15px;
+            padding: 18px;
+            margin-bottom: 25px;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(255, 165, 0, 0.4);
+            display: none;
+        }
+        
+        .nearby-radar.active {
+            display: block;
+        }
+
+        .nearby-radar h4 {
+            font-size: 1.4em;
+            color: #FFD700; /* Oro per il titolo */
+            margin-bottom: 10px;
+        }
+
+        .nearby-radar p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        /* Controlli (Bottoni) - Moderni e interattivi */
+        .controls {
+            display: grid;
+            gap: 18px; /* Spazio aumentato */
+            margin-bottom: 25px;
+        }
+        
+        .btn {
+            border: none;
+            border-radius: 15px; /* Angoli più arrotondati */
+            padding: 18px; /* Taller */
+            color: white;
+            font-size: 1.2em; /* Testo più grande */
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3); /* Ombra leggera sul testo */
+        }
+        
+        .btn:hover {
+            transform: translateY(-4px) scale(1.02); /* Più accentuato sul hover */
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4); /* Ombra più grande */
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .btn-add {
+            background: linear-gradient(45deg, #2ED7C8, #1AB19F); /* Blu-verde acqua brillante */
+            box-shadow: 0 6px 20px rgba(46, 215, 200, 0.3);
+        }
+        
+        .btn-add:hover {
+            box-shadow: 0 8px 25px rgba(46, 215, 200, 0.5);
+        }
+        
+        .btn-list {
+            background: linear-gradient(45deg, #6C5CE7, #8A2BE2); /* Viola-blu vibrante */
+            box-shadow: 0 6px 20px rgba(108, 92, 231, 0.3);
+        }
+        
+        .btn-list:hover {
+            box-shadow: 0 8px 25px rgba(108, 92, 231, 0.5);
+        }
+
+        /* Status GPS */
+        .gps-status {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+            font-size: 0.95em;
+            margin-bottom: 20px;
+            opacity: 0.9;
+            font-weight: 500;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Form Radar - Integrato e pulito */
+        .radar-form {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: none;
+        }
+        
+        .radar-form.active {
+            display: block;
+        }
+        
+        .form-group {
+            margin-bottom: 18px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            opacity: 0.9;
+        }
+        
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px; /* Angoli più arrotondati */
+            background: rgba(255, 255, 255, 0.95); /* Quasi opaco, leggermente trasparente */
+            color: #333;
+            font-size: 1.05em;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2), 0 0 0 2px #00E676; /* Glow verde al focus */
+        }
+
+        .radar-form .btn {
+            width: 100%; /* I bottoni del form a piena larghezza */
+            margin-top: 10px;
+        }
+        .radar-form .btn + .btn { /* Spazio tra i bottoni nel form */
+            margin-top: 15px;
+        }
+        .radar-form .btn[onclick="toggleAddForm()"] { /* Stile per il bottone Annulla */
+            background: linear-gradient(45deg, #7F8C8D, #5D6D7E); /* Grigio più scuro */
+            box-shadow: 0 4px 15px rgba(93, 109, 126, 0.2);
+        }
+
+        /* Lista Radar - Pulita e funzionale */
+        .radar-list {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: none;
+            max-height: 350px; /* Altezza aumentata */
+            overflow-y: auto;
+        }
+        
+        .radar-list.active {
+            display: block;
+        }
+        
+        .radar-item {
+            background: rgba(255, 255, 255, 0.12); /* Sfondo leggermente più chiaro */
+            border-radius: 10px;
+            padding: 18px;
+            margin-bottom: 12px; /* Spazio aumentato */
+            position: relative;
+            border: 1px solid rgba(255, 255, 255, 0.05); /* Bordo sottile */
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .radar-item h4 {
+            margin-bottom: 6px;
+            color: #00E676; /* Verde neon consistente */
+            font-size: 1.15em;
+        }
+        .radar-item p {
+            font-size: 0.95em;
+            opacity: 0.85;
+            margin-bottom: 3px;
+        }
+        
+        .delete-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: #E74C3C; /* Rosso più standard */
+            border: none;
+            border-radius: 50%;
+            width: 30px; /* Dimensione aumentata */
+            height: 30px;
+            color: white;
+            cursor: pointer;
+            font-size: 1em; /* Testo più grande */
+            font-weight: bold;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: transform 0.2s ease, background 0.2s ease;
+        }
+
+        .delete-btn:hover {
+            background: #C0392B; /* Rosso più scuro al hover */
+            transform: scale(1.1);
+        }
+
+        .radar-list .btn {
+            width: 100%;
+            margin-top: 20px;
+            background: linear-gradient(45deg, #7F8C8D, #5D6D7E); /* Grigio più scuro per il chiudi */
+            box-shadow: 0 4px 15px rgba(93, 109, 126, 0.2);
+        }
+        
+        .status {
+            text-align: center;
+            font-size: 0.95em;
+            opacity: 0.7;
+            margin-top: 15px; /* Spazio aggiuntivo */
+        }
+
+        /* Scrollbar Styling per la lista radar */
+        .radar-list::-webkit-scrollbar {
+            width: 8px;
+            background-color: rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+        }
+        
+        .radar-list::-webkit-scrollbar-thumb {
+            background-color: rgba(0, 230, 118, 0.4); /* Verde semi-trasparente */
+            border-radius: 10px;
+        }
+        
+        .radar-list::-webkit-scrollbar-thumb:hover {
+            background-color: rgba(0, 230, 118, 0.6);
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="speed-display">
+            <div class="current-speed" id="currentSpeed">0</div>
+            <div class="speed-label">km/h</div>
+            <div class="street-display" id="streetDisplay" style="display: none;">
+                <div class="street-name" id="streetName">🛣️ Rilevamento strada...</div>
+                <div class="street-details" id="streetDetails"></div>
+            </div>
+        </div>
+        
+        <div class="warning-alert" id="warningAlert">
+            <h3>⚠️ ATTENZIONE RADAR ⚠️</h3>
+            <p>Velocità attuale: <span id="alertCurrentSpeed">0</span> km/h</p>
+            <p>Limite: <span id="alertSpeedLimit">0</span> km/h</p>
+            <p>Distanza: <span id="alertDistance">0</span>m</p>
+        </div>
+        
+        <div class="nearby-radar" id="nearbyRadar">
+            <h4>📍 Radar nelle vicinanze</h4>
+            <p id="nearbyRadarInfo"></p>
+        </div>
+        
+        <div class="gps-status" id="gpsStatus">
+            📍 Rilevamento GPS...
+        </div>
+        
+        <div class="controls">
+            <button class="btn btn-add" onclick="toggleAddForm()">
+                📍 Aggiungi Radar Qui
+            </button>
+            <button class="btn btn-list" onclick="toggleRadarList()">
+                📋 Gestisci Radar
+            </button>
+        </div>
+        
+        <div class="radar-form" id="radarForm">
+            <h3>Nuovo Radar</h3>
+            <div class="form-group">
+                <label for="addRadarStreetName">Nome Strada:</label>
+                <input type="text" id="addRadarStreetName" placeholder="es. Via Roma">
+            </div>
+            <div class="form-group">
+                <label for="speedLimit">Limite Velocità (km/h):</label>
+                <input type="number" id="speedLimit" placeholder="50" min="10" max="150">
+            </div>
+            <div class="form-group">
+                <label for="radarType">Tipo:</label>
+                <select id="radarType">
+                    <option value="fisso">Radar Fisso</option>
+                    <option value="mobile">Radar Mobile</option>
+                </select>
+            </div>
+            <button class="btn btn-add" onclick="saveRadar()">💾 Salva Radar</button>
+            <button class="btn" onclick="toggleAddForm()">❌ Annulla</button>
+        </div>
+        
+        <div class="radar-list" id="radarList">
+            <h3>Radar Salvati</h3>
+            <div id="radarItems"></div>
+            <button class="btn" onclick="toggleRadarList()">✖️ Chiudi</button>
+        </div>
+        
+        <div class="status" id="status">
+            Pronto per il rilevamento
+        </div>
+    </div>
+
+    <script>
+        let currentLocation = null;
+        let currentSpeed = 0;
+        let radars = [];
+        let watchId = null;
+        let audioContext = null;
+        let isWarningActive = false;
+        let currentStreetInfo = null;
+        let lastGeocodingTime = 0;
+        
+        let wakeLock = null; // Variabile per il Wake Lock
+
+        // Funzione per richiedere il Wake Lock
+        async function requestWakeLock() {
+            if ('wakeLock' in navigator) {
+                try {
+                    // Controlla se un wake lock è già attivo e non rilasciato
+                    if (wakeLock !== null && !wakeLock.released) {
+                        console.log('Wake Lock già attivo.');
+                        return;
+                    }
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    wakeLock.addEventListener('release', () => {
+                        console.log('Wake Lock è stato rilasciato dal sistema.');
+                        // Il lock potrebbe essere riacquisito dal gestore visibilitychange se la pagina è visibile
+                    });
+                    console.log('Wake Lock acquisito con successo. Lo schermo rimarrà acceso.');
+                    const statusElem = document.getElementById('status');
+                    // Aggiungi un'indicazione allo status se non ci sono errori GPS
+                    if (statusElem && !statusElem.textContent.toLowerCase().includes('errore')) {
+                         statusElem.textContent = 'GPS attivo. Schermo acceso.';
+                    }
+                } catch (err) {
+                    console.error(`Impossibile acquisire Wake Lock: ${err.name}, ${err.message}`);
+                    // Non mostrare un alert all'utente, ma logga l'errore
+                    // Potrebbe essere che l'utente ha negato il permesso o il browser non lo supporta pienamente
+                }
+            } else {
+                console.warn('Wake Lock API non supportata da questo browser.');
+                // Potresti informare l'utente che lo schermo potrebbe spegnersi
+                // alert("Il tuo browser non supporta la funzione per mantenere lo schermo acceso. Lo schermo potrebbe spegnersi automaticamente.");
+            }
+        }
+
+        // Gestisce il Wake Lock in base alla visibilità della pagina
+        document.addEventListener('visibilitychange', async () => {
+            if (document.visibilityState === 'visible' && 'wakeLock' in navigator) {
+                // Se la pagina torna visibile e il wake lock non è attivo o è stato rilasciato,
+                // prova a riacquisirlo.
+                if (wakeLock === null || (wakeLock && wakeLock.released)) {
+                    console.log('Pagina nuovamente visibile, tentativo di riacquisire il Wake Lock.');
+                    await requestWakeLock();
+                }
+            }
+        });
+
+        // Funzione per abilitare le funzionalità che richiedono interazione utente (Audio e WakeLock)
+        async function enableUserActivatedFeatures() {
+            // Riprendi AudioContext
+            if (audioContext && audioContext.state === 'suspended') {
+                try {
+                    await audioContext.resume();
+                    console.log('AudioContext ripreso con successo dopo interazione.');
+                } catch (e) {
+                    console.error('Errore nel ripristinare AudioContext dopo interazione:', e);
+                }
+            }
+
+            // Richiedi WakeLock
+            await requestWakeLock();
+        }
+
+        // Funzione per inizializzare l'applicazione
+        function init() {
+            loadRadars();
+            startGPSTracking();
+            initAudio(); // Assicurati che audioContext sia inizializzato
+            updateDisplay(); 
+        }
+        
+        function initAudio() {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            } catch (e) {
+                console.log('Audio non supportato nel browser.');
+            }
+        }
+        
+        function playWarningBeep() {
+            if (!audioContext || audioContext.state === 'suspended') {
+                if (audioContext) { 
+                    audioContext.resume().catch(e => console.error("Resume fallito:", e)); // Tenta di riattivare
+                } else { return; }
+            }
+            if (audioContext.state !== 'running') return; // Se non è in esecuzione, non fare nulla
+            
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = 800; 
+            oscillator.type = 'sine'; 
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime); 
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3); 
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.3);
+        }
+        
+        function startGPSTracking() {
+            if (!navigator.geolocation) {
+                document.getElementById('gpsStatus').textContent = '❌ GPS non supportato dal tuo browser.';
+                return;
+            }
+            
+            const options = {
+                enableHighAccuracy: true, 
+                timeout: 10000, 
+                maximumAge: 5000 
+            };
+            
+            watchId = navigator.geolocation.watchPosition(
+                updateLocation,
+                handleLocationError,
+                options
+            );
+            document.getElementById('status').textContent = 'Rilevamento GPS in corso...';
+        }
+        
+        function updateLocation(position) {
+            currentLocation = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude,
+                accuracy: position.coords.accuracy
+            };
+            
+            if (position.coords.speed !== null && position.coords.speed >= 0) {
+                currentSpeed = Math.round(position.coords.speed * 3.6); 
+            } else {
+                currentSpeed = 0; 
+            }
+            
+            document.getElementById('gpsStatus').textContent = 
+                `📍 GPS Attivo (Accuratezza: ±${Math.round(currentLocation.accuracy)}m)`;
+            
+            updateDisplay();
+            updateStreetInfo(); 
+            checkNearbyRadars(); 
+        }
+        
+        function handleLocationError(error) {
+            let message = '❌ Errore GPS: ';
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    message += "Permesso negato. Abilita il GPS nelle impostazioni del browser.";
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    message += "Posizione non disponibile.";
+                    break;
+                case error.TIMEOUT:
+                    message += "Timeout del rilevamento GPS. Riprova.";
+                    break;
+                default:
+                    message += "Errore sconosciuto.";
+                    break;
+            }
+            document.getElementById('gpsStatus').textContent = message;
+            document.getElementById('status').textContent = 'Errore GPS.';
+        }
+        
+        function updateDisplay() {
+            document.getElementById('currentSpeed').textContent = currentSpeed;
+            
+            const streetDisplay = document.getElementById('streetDisplay');
+            const streetNameElem = document.getElementById('streetName');
+            const streetDetailsElem = document.getElementById('streetDetails');
+
+            if (currentStreetInfo && currentStreetInfo.road) {
+                streetNameElem.textContent = `🛣️ ${currentStreetInfo.road}`;
+                let details = [];
+                if (currentStreetInfo.city) details.push(currentStreetInfo.city);
+                if (currentStreetInfo.state) details.push(currentStreetInfo.state);
+                if (currentStreetInfo.postcode) details.push(currentStreetInfo.postcode);
+                streetDetailsElem.textContent = details.join(', ');
+                streetDisplay.style.display = 'block';
+            } else if (currentLocation) {
+                streetNameElem.textContent = `Lat: ${currentLocation.lat.toFixed(4)}, Lng: ${currentLocation.lng.toFixed(4)}`;
+                streetDetailsElem.textContent = 'Posizione GPS';
+                streetDisplay.style.display = 'block';
+            } else {
+                streetDisplay.style.display = 'none'; 
+            }
+        }
+        
+        async function updateStreetInfo() {
+            if (!currentLocation) return;
+            
+            const now = Date.now();
+            if (now - lastGeocodingTime < 10000) return;
+            lastGeocodingTime = now;
+            
+            try {
+                const response = await fetch(
+                    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${currentLocation.lat}&lon=${currentLocation.lng}&zoom=18&addressdetails=1`,
+                    {
+                        headers: {
+                            'User-Agent': 'RadarDetectorApp/1.0 (https://your-app-url-or-contact)' 
+                        }
+                    }
+                );
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data && data.address) {
+                        currentStreetInfo = {
+                            road: data.address.road || data.address.pedestrian || data.address.footway || data.address.path || data.display_name.split(',')[0],
+                            city: data.address.city || data.address.town || data.address.village || data.address.municipality,
+                            state: data.address.state || data.address.region,
+                            postcode: data.address.postcode,
+                            country: data.address.country
+                        };
+                        updateDisplay();
+                    } else {
+                        currentStreetInfo = null; 
+                        updateDisplay(); 
+                    }
+                } else {
+                    console.warn(`Geocoding fallito con stato ${response.status}: ${response.statusText}`);
+                    currentStreetInfo = null;
+                    updateDisplay();
+                }
+            } catch (error) {
+                console.error('Errore nel recupero info strada:', error);
+                currentStreetInfo = null;
+                updateDisplay();
+            }
+        }
+        
+        function calculateDistance(lat1, lng1, lat2, lng2) {
+            const R = 6371000; 
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLng = (lng2 - lng1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                    Math.sin(dLng/2) * Math.sin(dLng/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c; 
+        }
+        
+        function checkNearbyRadars() {
+            if (!currentLocation || radars.length === 0) {
+                hideNearbyRadar();
+                hideSpeedWarning();
+                return;
+            }
+            
+            let nearestRadar = null;
+            let minDistance = Infinity;
+            
+            for (let radar of radars) {
+                const distance = calculateDistance(
+                    currentLocation.lat, currentLocation.lng,
+                    radar.lat, radar.lng
+                );
+                
+                if (distance < minDistance && distance <= 500) { 
+                    minDistance = distance;
+                    nearestRadar = radar;
+                }
+            }
+            
+            if (nearestRadar && minDistance <= 300) { 
+                showNearbyRadar(nearestRadar, Math.round(minDistance));
+                
+                if (currentSpeed > nearestRadar.speedLimit) {
+                    showSpeedWarning(nearestRadar, Math.round(minDistance));
+                } else {
+                    hideSpeedWarning(); 
+                }
+            } else {
+                hideNearbyRadar();
+                hideSpeedWarning();
+            }
+        }
+        
+        function showNearbyRadar(radar, distance) {
+            const nearbyRadar = document.getElementById('nearbyRadar');
+            const info = document.getElementById('nearbyRadarInfo');
+            info.textContent = `Su ${radar.streetName} (${radar.type}) a ${distance}m`;
+            nearbyRadar.classList.add('active');
+        }
+        
+        function hideNearbyRadar() {
+            document.getElementById('nearbyRadar').classList.remove('active');
+        }
+        
+        let beepIntervalId = null; 
+
+        function showSpeedWarning(radar, distance) {
+            const warningAlert = document.getElementById('warningAlert');
+            document.getElementById('alertCurrentSpeed').textContent = currentSpeed;
+            document.getElementById('alertSpeedLimit').textContent = radar.speedLimit;
+            document.getElementById('alertDistance').textContent = distance;
+            
+            if (!isWarningActive) {
+                isWarningActive = true;
+                playWarningBeep();
+                
+                beepIntervalId = setInterval(() => {
+                    if (isWarningActive) {
+                        playWarningBeep();
+                    } else {
+                        clearInterval(beepIntervalId); 
+                        beepIntervalId = null;
+                    }
+                }, 1500); 
+            }
+            warningAlert.classList.add('active');
+        }
+        
+        function hideSpeedWarning() {
+            isWarningActive = false;
+            if (beepIntervalId) {
+                clearInterval(beepIntervalId); 
+                beepIntervalId = null;
+            }
+            document.getElementById('warningAlert').classList.remove('active');
+        }
+        
+        function toggleAddForm() {
+            const form = document.getElementById('radarForm');
+            const isActive = form.classList.contains('active');
+            
+            document.getElementById('radarList').classList.remove('active');
+            
+            if (!isActive) {
+                if (!currentLocation) {
+                    alert('GPS non disponibile. Attendi il rilevamento della posizione prima di aggiungere un radar.');
+                    return;
+                }
+                form.classList.add('active');
+                
+                const addRadarStreetNameInput = document.getElementById('addRadarStreetName');
+                if (currentStreetInfo && currentStreetInfo.road) {
+                    addRadarStreetNameInput.value = currentStreetInfo.road;
+                } else if (currentLocation) {
+                    addRadarStreetNameInput.value = `Posizione GPS: Lat ${currentLocation.lat.toFixed(4)}, Lng ${currentLocation.lng.toFixed(4)}`;
+                } else {
+                    addRadarStreetNameInput.value = '';
+                }
+                
+                addRadarStreetNameInput.focus();
+            } else {
+                form.classList.remove('active');
+                clearForm(); 
+            }
+        }
+        
+        function toggleRadarList() {
+            const list = document.getElementById('radarList');
+            document.getElementById('radarForm').classList.remove('active');
+            
+            list.classList.toggle('active');
+            if (list.classList.contains('active')) {
+                updateRadarList(); 
+            }
+        }
+        
+        function saveRadar() {
+            if (!currentLocation) {
+                alert('Impossibile salvare: Posizione GPS non disponibile.');
+                return;
+            }
+            
+            const streetName = document.getElementById('addRadarStreetName').value.trim();
+            const speedLimit = parseInt(document.getElementById('speedLimit').value);
+            const radarType = document.getElementById('radarType').value;
+            
+            if (!streetName || isNaN(speedLimit) || speedLimit < 10 || speedLimit > 150) {
+                alert('Inserisci tutti i dati correttamente: nome strada e limite di velocità valido (10-150 km/h).');
+                return;
+            }
+            
+            const radar = {
+                id: Date.now(), 
+                lat: currentLocation.lat,
+                lng: currentLocation.lng,
+                streetName: streetName,
+                speedLimit: speedLimit,
+                type: radarType,
+                timestamp: new Date().toLocaleString('it-IT') 
+            };
+            
+            radars.push(radar);
+            saveRadars(); 
+            clearForm(); 
+            toggleAddForm(); 
+            
+            alert('Radar salvato con successo!');
+        }
+        
+        function clearForm() {
+            document.getElementById('addRadarStreetName').value = ''; 
+            document.getElementById('speedLimit').value = '';
+            document.getElementById('radarType').value = 'fisso';
+        }
+        
+        function updateRadarList() {
+            const container = document.getElementById('radarItems');
+            
+            if (radars.length === 0) {
+                container.innerHTML = '<p style="text-align: center; opacity: 0.7; padding: 20px;">Nessun radar salvato. Aggiungine uno!</p>';
+                return;
+            }
+            
+            const sortedRadars = [...radars].sort((a, b) => a.streetName.localeCompare(b.streetName));
+
+            container.innerHTML = sortedRadars.map(radar => `
+                <div class="radar-item">
+                    <button class="delete-btn" onclick="deleteRadar(${radar.id})">×</button>
+                    <h4>${radar.streetName}</h4>
+                    <p><strong>Tipo:</strong> ${radar.type}</p>
+                    <p><strong>Limite:</strong> ${radar.speedLimit} km/h</p>
+                    <p><strong>Salvato il:</strong> ${radar.timestamp}</p>
+                    <p><strong>Lat:</strong> ${radar.lat.toFixed(6)}, <strong>Lng:</strong> ${radar.lng.toFixed(6)}</p>
+                </div>
+            `).join('');
+        }
+        
+        function deleteRadar(id) {
+            if (confirm('Sei sicuro di voler eliminare questo radar?')) {
+                radars = radars.filter(radar => radar.id !== id);
+                saveRadars(); 
+                updateRadarList(); 
+                checkNearbyRadars(); 
+            }
+        }
+        
+        function saveRadars() {
+            try {
+                localStorage.setItem('radars', JSON.stringify(radars));
+                console.log('Radar salvati nel localStorage.');
+            } catch (e) {
+                console.error('Errore nel salvataggio dei radar:', e);
+                alert('Impossibile salvare i radar. Potrebbe esserci un problema con lo spazio di archiviazione del browser.');
+            }
+        }
+        
+        function loadRadars() {
+            try {
+                const storedRadars = localStorage.getItem('radars');
+                if (storedRadars) {
+                    radars = JSON.parse(storedRadars);
+                    console.log('Radar caricati dal localStorage.');
+                }
+            } catch (e) {
+                console.error('Errore nel caricamento dei radar:', e);
+                alert('Impossibile caricare i radar salvati. I dati potrebbero essere corrotti.');
+                radars = []; 
+            }
+        }
+        
+        window.onload = init;
+        
+        // Rimuovi i vecchi listener singoli per audioContext.resume()
+        // La logica è ora in enableUserActivatedFeatures()
+        
+        // Aggiungi listener per la prima interazione utente per abilitare audio e wake lock
+        document.addEventListener('touchstart', enableUserActivatedFeatures, { once: true });
+        document.addEventListener('click', enableUserActivatedFeatures, { once: true });
+
+    </script>
+</body>
+</html>
